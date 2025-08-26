@@ -3,9 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Menu, Sun, Moon, RotateCcw, Send, Paperclip } from 'lucide-react';
 import Message from '@/components/chat/message';
-import { useCreateMessage } from '@/hooks/use-ollama';
+import { useCreateMessage, useMessages } from '@/hooks/use-ollama';
 import { cn } from '@/lib/utils';
 import type { Message as MessageType, Conversation } from '@/lib/ollama-api';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface ChatAreaProps {
   conversationId?: string;
@@ -37,6 +38,7 @@ export default function ChatArea({
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const createMessageMutation = useCreateMessage();
+  const queryClient = useQueryClient(); // Get query client
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -120,6 +122,8 @@ export default function ChatArea({
               if (data.done) {
                 setIsGenerating(false);
                 setStreamingMessage('');
+                // Invalidate messages query to refetch the assistant's complete message
+                queryClient.invalidateQueries({ queryKey: ['/api/conversations', activeConversationId, 'messages'] });
                 return;
               }
 
