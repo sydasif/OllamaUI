@@ -76,7 +76,7 @@ export default function Chat() {
         data-testid="sidebar"
       />
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <ChatArea
           conversationId={conversationId}
           currentConversation={currentConversation}
