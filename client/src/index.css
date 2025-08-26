@@ -1,0 +1,99 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(210 25% 7.8431%);
+  --card: hsl(180 6.6667% 97.0588%);
+  --card-foreground: hsl(210 25% 7.8431%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(210 25% 7.8431%);
+  --primary: hsl(239.6 88.1% 59.4%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(210 25% 7.8431%);
+  --secondary-foreground: hsl(0 0% 100%);
+  --muted: hsl(240 1.9608% 90%);
+  --muted-foreground: hsl(210 25% 7.8431%);
+  --accent: hsl(211.5789 51.3514% 92.7451%);
+  --accent-foreground: hsl(239.6 88.1% 59.4%);
+  --destructive: hsl(0 85% 60%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(201.4286 30.4348% 90.9804%);
+  --input: hsl(200 23.0769% 97.4510%);
+  --ring: hsl(239.6 88.1% 59.4%);
+  --success: hsl(142 69% 58%);
+  --error: hsl(0 85% 60%);
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: hsl(224 71.4% 4.1%);
+  --foreground: hsl(210 20% 98%);
+  --card: hsl(224 71.4% 4.1%);
+  --card-foreground: hsl(210 20% 98%);
+  --popover: hsl(224 71.4% 4.1%);
+  --popover-foreground: hsl(210 20% 98%);
+  --primary: hsl(239.6 88.1% 59.4%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(215 27.9% 16.9%);
+  --secondary-foreground: hsl(210 20% 98%);
+  --muted: hsl(215 27.9% 16.9%);
+  --muted-foreground: hsl(217.9 10.6% 64.9%);
+  --accent: hsl(215 27.9% 16.9%);
+  --accent-foreground: hsl(239.6 88.1% 59.4%);
+  --destructive: hsl(0 85% 60%);
+  --destructive-foreground: hsl(210 20% 98%);
+  --border: hsl(215 27.9% 16.9%);
+  --input: hsl(215 27.9% 16.9%);
+  --ring: hsl(239.6 88.1% 59.4%);
+  --success: hsl(142 69% 58%);
+  --error: hsl(0 85% 60%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+.gradient-primary {
+  background: linear-gradient(135deg, hsl(239.6 88.1% 59.4%) 0%, hsl(262 100% 68%) 100%);
+}
+
+.animate-typing {
+  animation: typing 1.5s ease-in-out infinite;
+}
+
+@keyframes typing {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-10px);
+  }
+}
+
+.prose {
+  max-width: none;
+}
+
+.prose pre {
+  @apply bg-muted rounded-md overflow-x-auto;
+}
+
+.prose code {
+  @apply bg-muted px-1 py-0.5 rounded text-sm;
+}
+
+.prose pre code {
+  @apply bg-transparent p-0;
+}
