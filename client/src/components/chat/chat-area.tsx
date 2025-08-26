@@ -50,7 +50,7 @@ export default function ChatArea({
     setInput('');
 
     let activeConversationId = conversationId;
-    
+
     // Create new conversation if needed
     if (!activeConversationId) {
       const newConvId = await onStartNewConversation(messageText);
@@ -69,12 +69,8 @@ export default function ChatArea({
       setIsGenerating(true);
       setStreamingMessage('');
 
-      const eventSource = new EventSource(`/api/conversations/${activeConversationId}/chat`, {
-        withCredentials: true,
-      });
-
-      // Send chat request
-      await fetch(`/api/conversations/${activeConversationId}/chat`, {
+      // Send chat request and handle streaming response
+      const response = await fetch(`/api/conversations/${activeConversationId}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -85,42 +81,61 @@ export default function ChatArea({
         }),
       });
 
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          
-          if (data.error) {
-            console.error('Streaming error:', data.error);
-            eventSource.close();
-            setIsGenerating(false);
-            return;
-          }
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Fetch response not OK:', errorText); // Log error response
+        throw new Error(`Failed to start chat: ${response.status} - ${errorText}`);
+      }
 
-          if (data.done) {
-            eventSource.close();
-            setIsGenerating(false);
-            setStreamingMessage('');
-            return;
-          }
-
-          if (data.content) {
-            setStreamingMessage(prev => prev + data.content);
-          }
-        } catch (error) {
-          console.error('Error parsing stream data:', error);
-        }
-      };
-
-      eventSource.onerror = (error) => {
-        console.error('EventSource error:', error);
-        eventSource.close();
+      const reader = response.body?.getReader();
+      if (!reader) {
+        console.error('No readable stream from response.'); // Log if no reader
         setIsGenerating(false);
         setStreamingMessage('');
-      };
+        return;
+      }
 
+      const decoder = new TextDecoder();
+      let done = false;
+
+      while (!done) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+        const chunk = decoder.decode(value, { stream: true });
+        console.log('Received chunk:', chunk); // Log each chunk
+        const lines = chunk.split('\n').filter(line => line.trim());
+
+        for (const line of lines) {
+          console.log('Processing line:', line); // Log each line
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.substring(6));
+              console.log('Parsed data:', data); // Log parsed data
+              if (data.error) {
+                console.error('Streaming error:', data.error);
+                setIsGenerating(false);
+                return;
+              }
+
+              if (data.done) {
+                setIsGenerating(false);
+                setStreamingMessage('');
+                return;
+              }
+
+              if (data.content) {
+                setStreamingMessage(prev => prev + data.content);
+              }
+            } catch (e) {
+              console.error('Error parsing stream data:', e);
+            }
+          }
+        }
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       setIsGenerating(false);
+      setStreamingMessage('');
     }
   };
 
@@ -170,7 +185,7 @@ export default function ChatArea({
             </p>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <Button
             variant="ghost"
@@ -184,7 +199,7 @@ export default function ChatArea({
               <Moon className="w-5 h-5" />
             )}
           </Button>
-          
+
           <Button
             variant="ghost"
             size="sm"
@@ -219,7 +234,7 @@ export default function ChatArea({
             {messages.map((message) => (
               <Message key={message.id} message={message} />
             ))}
-            
+
             {/* Streaming Message */}
             {isGenerating && (
               <div className="flex space-x-3">
@@ -271,7 +286,7 @@ export default function ChatArea({
               disabled={isGenerating}
               data-testid="input-message"
             />
-            
+
             <div className="absolute right-3 bottom-3 flex items-center space-x-2">
               <Button
                 type="button"
@@ -281,7 +296,7 @@ export default function ChatArea({
               >
                 <Paperclip className="w-4 h-4" />
               </Button>
-              
+
               <Button
                 type="submit"
                 size="sm"
@@ -292,7 +307,7 @@ export default function ChatArea({
               </Button>
             </div>
           </form>
-          
+
           <div className="flex items-center justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
             <div className="flex items-center space-x-4">
               <span>Press Shift+Enter for new line</span>

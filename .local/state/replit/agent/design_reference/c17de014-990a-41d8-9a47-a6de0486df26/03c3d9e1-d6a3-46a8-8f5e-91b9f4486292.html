@@ -1,0 +1,590 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ollama Chat Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#6B7280',
+                        success: '#10B981',
+                        error: '#EF4444'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            },
+            darkMode: 'class'
+        };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 font-sans antialiased">
+    
+    <!-- @COMPONENT: MainLayout -->
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- @COMPONENT: Sidebar -->
+        <div id="sidebar" class="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transform transition-transform duration-300 ease-in-out lg:translate-x-0 -translate-x-full lg:static absolute z-50 h-full">
+            
+            <!-- Sidebar Header -->
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between mb-4">
+                    <h1 class="text-lg font-semibold text-gray-900 dark:text-white">Ollama Chat</h1>
+                    <button id="closeSidebar" class="lg:hidden p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Connection Status -->
+                <div class="flex items-center space-x-2 p-2 rounded-lg bg-gray-50 dark:bg-gray-700">
+                    <div class="w-2 h-2 bg-success rounded-full animate-pulse" data-bind="connectionStatus"></div>
+                    <span class="text-sm text-gray-600 dark:text-gray-300" data-bind="connectionText">Connected to localhost:11434</span>
+                </div>
+            </div>
+
+            <!-- Model Selection -->
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Current Model</label>
+                <div class="relative">
+                    <select id="modelSelect" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white appearance-none cursor-pointer" data-event="change:handleModelChange">
+                        <option value="llama3.1" data-mock="true">Llama 3.1 (8B)</option>
+                        <option value="mistral" data-mock="true">Mistral 7B</option>
+                        <option value="codestral" data-mock="true">Codestral</option>
+                        <option value="phi-4" data-mock="true">Phi-4 (14B)</option>
+                        <option value="qwen3" data-mock="true">Qwen 3</option>
+                        <option value="gemma-3" data-mock="true">Gemma 3 (9B)</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat History -->
+            <div class="flex-1 overflow-y-auto p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Recent Chats</h3>
+                    <button class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" data-event="click:clearHistory" data-implementation="Clear chat history">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- @MAP: chatHistory.map(chat => ( -->
+                <div class="space-y-2" data-mock="true">
+                    <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors">
+                        <div class="text-sm font-medium text-gray-900 dark:text-white truncate">Code optimization help</div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">2 minutes ago</div>
+                    </div>
+                    <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors">
+                        <div class="text-sm font-medium text-gray-900 dark:text-white truncate">Python debugging</div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">1 hour ago</div>
+                    </div>
+                    <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors">
+                        <div class="text-sm font-medium text-gray-900 dark:text-white truncate">React component design</div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Yesterday</div>
+                    </div>
+                </div>
+                <!-- @END_MAP )) -->
+            </div>
+
+            <!-- Model Management & Settings -->
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                <button class="w-full flex items-center justify-center space-x-2 p-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" data-event="click:openModelManager">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    <span>Manage Models</span>
+                </button>
+                
+                <button id="settingsBtn" class="w-full flex items-center justify-center space-x-2 p-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" data-event="click:openSettings">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    <span>Settings</span>
+                </button>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: Sidebar -->
+
+        <!-- @COMPONENT: MainChatArea -->
+        <div class="flex-1 flex flex-col">
+            
+            <!-- Header -->
+            <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <button id="sidebarToggle" class="lg:hidden p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white" data-bind="selectedModel">Llama 3.1 (8B)</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Ready to assist</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-2">
+                    <!-- Dark Mode Toggle -->
+                    <button id="darkModeToggle" class="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                        </svg>
+                        <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                        </svg>
+                    </button>
+                    
+                    <!-- Clear Chat -->
+                    <button class="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-event="click:clearCurrentChat" data-implementation="Clear current conversation">
+                        <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Chat Messages Area -->
+            <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-4" data-implementation="Scroll to bottom on new messages">
+                
+                <!-- Welcome Message -->
+                <div class="flex justify-center" data-mock="true">
+                    <div class="max-w-md text-center">
+                        <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-primary to-purple-600 rounded-full flex items-center justify-center">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Welcome to Ollama Chat</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Start a conversation with your local AI model. Ask questions, get help with coding, or explore creative ideas.</p>
+                    </div>
+                </div>
+
+                <!-- @MAP: messages.map(message => ( -->
+                <div class="flex space-x-3" data-mock="true">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-4 h-4 text-blue-600 dark:text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+                            <div class="prose dark:prose-invert max-w-none text-sm">
+                                <p>Can you help me optimize this Python function for better performance?</p>
+                                <pre class="bg-gray-100 dark:bg-gray-900 p-3 rounded text-xs overflow-x-auto"><code>def slow_function(data):
+    result = []
+    for item in data:
+        if item % 2 == 0:
+            result.append(item * 2)
+    return result</code></pre>
+                            </div>
+                            <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                                <span class="text-xs text-gray-500 dark:text-gray-400">2 minutes ago</span>
+                                <button class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex items-center space-x-1" data-event="click:copyMessage">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                    </svg>
+                                    <span>Copy</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex space-x-3" data-mock="true">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-r from-primary to-purple-600 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-600">
+                            <div class="prose dark:prose-invert max-w-none text-sm">
+                                <p>I can help you optimize that Python function! Here are several improvements you can make:</p>
+                                
+                                <h4>1. Using List Comprehension</h4>
+                                <pre class="bg-white dark:bg-gray-800 p-3 rounded text-xs overflow-x-auto"><code>def optimized_function_v1(data):
+    return [item * 2 for item in data if item % 2 == 0]</code></pre>
+
+                                <h4>2. Using NumPy (for large datasets)</h4>
+                                <pre class="bg-white dark:bg-gray-800 p-3 rounded text-xs overflow-x-auto"><code>import numpy as np
+
+def optimized_function_v2(data):
+    arr = np.array(data)
+    even_mask = arr % 2 == 0
+    return (arr[even_mask] * 2).tolist()</code></pre>
+
+                                <p><strong>Performance comparison:</strong> The list comprehension is typically 2-3x faster than the original loop, while NumPy can be 10-50x faster for large datasets (1000+ elements).</p>
+                            </div>
+                            <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-600">
+                                <span class="text-xs text-gray-500 dark:text-gray-400">2 minutes ago</span>
+                                <div class="flex items-center space-x-2">
+                                    <button class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex items-center space-x-1" data-event="click:copyMessage">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                        </svg>
+                                        <span>Copy</span>
+                                    </button>
+                                    <button class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex items-center space-x-1" data-event="click:shareMessage">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
+                                        </svg>
+                                        <span>Share</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Typing Indicator -->
+                <div id="typingIndicator" class="flex space-x-3 hidden" data-implementation="Show when AI is generating response">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-r from-primary to-purple-600 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-600">
+                            <div class="flex items-center space-x-2">
+                                <div class="flex space-x-1">
+                                    <div class="w-2 h-2 bg-primary rounded-full animate-bounce" style="animation-delay: 0s"></div>
+                                    <div class="w-2 h-2 bg-primary rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                                    <div class="w-2 h-2 bg-primary rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                                </div>
+                                <span class="text-sm text-gray-500 dark:text-gray-400">Thinking...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_MAP )) -->
+            </div>
+
+            <!-- Message Input Area -->
+            <div class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
+                <div class="max-w-4xl mx-auto">
+                    <div class="relative">
+                        <textarea 
+                            id="messageInput" 
+                            placeholder="Type your message here... (Shift+Enter for new line)"
+                            class="w-full p-4 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 min-h-[60px] max-h-40"
+                            data-event="keydown:handleKeyPress"
+                            data-implementation="Handle Enter to send, Shift+Enter for new line"
+                        ></textarea>
+                        
+                        <div class="absolute right-3 bottom-3 flex items-center space-x-2">
+                            <!-- File Upload -->
+                            <label class="cursor-pointer p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+                                </svg>
+                                <input type="file" class="hidden" accept=".txt,.md,.pdf,.doc,.docx" data-implementation="File upload for context">
+                            </label>
+                            
+                            <!-- Send Button -->
+                            <button 
+                                id="sendButton"
+                                class="p-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                                data-event="click:sendMessage"
+                                data-implementation="Validate input and send message to Ollama API"
+                            >
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Input Footer -->
+                    <div class="flex items-center justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        <div class="flex items-center space-x-4">
+                            <span>Press Shift+Enter for new line</span>
+                            <span>•</span>
+                            <span data-bind="tokenCount">0 tokens</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span>Powered by</span>
+                            <span class="font-medium text-primary">Ollama</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: MainChatArea -->
+    </div>
+    <!-- @END_COMPONENT: MainLayout -->
+
+    <!-- @COMPONENT: SettingsModal -->
+    <div id="settingsModal" class="fixed inset-0 z-50 hidden" data-implementation="Modal for Ollama settings">
+        <div class="absolute inset-0 bg-black bg-opacity-50" data-event="click:closeModal"></div>
+        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-gray-800 rounded-xl shadow-xl">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Settings</h3>
+                    <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" data-event="click:closeModal">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="space-y-4">
+                    <!-- Ollama API URL -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Ollama API URL</label>
+                        <input 
+                            type="url" 
+                            class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                            value="http://localhost:11434"
+                            data-bind="apiUrl"
+                        >
+                    </div>
+                    
+                    <!-- Temperature -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Temperature (Creativity)</label>
+                        <div class="flex items-center space-x-4">
+                            <input 
+                                type="range" 
+                                min="0" 
+                                max="1" 
+                                step="0.1" 
+                                value="0.7"
+                                class="flex-1"
+                                data-bind="temperature"
+                            >
+                            <span class="text-sm text-gray-500 dark:text-gray-400 min-w-[3rem]" data-bind="temperatureValue">0.7</span>
+                        </div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Lower values are more focused, higher values are more creative</p>
+                    </div>
+                    
+                    <!-- Max Tokens -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Max Response Length</label>
+                        <select class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white" data-bind="maxTokens">
+                            <option value="512">Short (512 tokens)</option>
+                            <option value="1024" selected>Medium (1024 tokens)</option>
+                            <option value="2048">Long (2048 tokens)</option>
+                            <option value="4096">Very Long (4096 tokens)</option>
+                        </select>
+                    </div>
+                    
+                    <!-- System Prompt -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">System Prompt</label>
+                        <textarea 
+                            class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                            rows="3"
+                            placeholder="You are a helpful AI assistant..."
+                            data-bind="systemPrompt"
+                        ></textarea>
+                    </div>
+                    
+                    <!-- Auto-save Chat -->
+                    <div class="flex items-center justify-between">
+                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Auto-save Chat History</label>
+                        <button class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 bg-primary" data-bind="autoSave" data-event="click:toggleAutoSave">
+                            <span class="sr-only">Use setting</span>
+                            <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-5"></span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" data-event="click:closeModal">
+                        Cancel
+                    </button>
+                    <button class="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors" data-event="click:saveSettings" data-implementation="Save settings to localStorage">
+                        Save Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: SettingsModal -->
+
+    <!-- @COMPONENT: ModelManagerModal -->
+    <div id="modelManagerModal" class="fixed inset-0 z-50 hidden" data-implementation="Modal for managing Ollama models">
+        <div class="absolute inset-0 bg-black bg-opacity-50" data-event="click:closeModal"></div>
+        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-white dark:bg-gray-800 rounded-xl shadow-xl">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Model Management</h3>
+                    <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" data-event="click:closeModal">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Pull New Model -->
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
+                    <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Pull New Model</h4>
+                    <div class="flex space-x-3">
+                        <input 
+                            type="text" 
+                            placeholder="Model name (e.g., llama3.1, mistral)"
+                            class="flex-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            data-bind="newModelName"
+                        >
+                        <button class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors" data-event="click:pullModel" data-implementation="Pull model from Ollama registry">
+                            Pull Model
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Available Models -->
+                <div>
+                    <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Available Models</h4>
+                    <div class="space-y-2 max-h-64 overflow-y-auto" data-mock="true">
+                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div>
+                                <div class="font-medium text-gray-900 dark:text-white">llama3.1:8b</div>
+                                <div class="text-sm text-gray-500 dark:text-gray-400">Size: 4.7GB • Downloaded: Jan 15</div>
+                            </div>
+                            <button class="text-red-500 hover:text-red-700 text-sm font-medium" data-event="click:deleteModel">Delete</button>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div>
+                                <div class="font-medium text-gray-900 dark:text-white">mistral:7b</div>
+                                <div class="text-sm text-gray-500 dark:text-gray-400">Size: 4.1GB • Downloaded: Jan 10</div>
+                            </div>
+                            <button class="text-red-500 hover:text-red-700 text-sm font-medium" data-event="click:deleteModel">Delete</button>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div>
+                                <div class="font-medium text-gray-900 dark:text-white">codestral:22b</div>
+                                <div class="text-sm text-gray-500 dark:text-gray-400">Size: 13.4GB • Downloaded: Dec 28</div>
+                            </div>
+                            <button class="text-red-500 hover:text-red-700 text-sm font-medium" data-event="click:deleteModel">Delete</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end mt-6">
+                    <button class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" data-event="click:closeModal">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: ModelManagerModal -->
+
+    <!-- @STATE: darkMode:boolean = false -->
+    <!-- @STATE: sidebarOpen:boolean = false -->
+    <!-- @STATE: currentModel:string = "llama3.1" -->
+    <!-- @STATE: isConnected:boolean = true -->
+    <!-- @STATE: isGenerating:boolean = false -->
+
+    <script>
+        // TODO: Implement business logic, API calls, and state management
+        (function() {
+            // DOM Elements
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const closeSidebar = document.getElementById('closeSidebar');
+            const sidebar = document.getElementById('sidebar');
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            const settingsBtn = document.getElementById('settingsBtn');
+            const settingsModal = document.getElementById('settingsModal');
+            const modelManagerModal = document.getElementById('modelManagerModal');
+            const messageInput = document.getElementById('messageInput');
+            const sendButton = document.getElementById('sendButton');
+            const chatMessages = document.getElementById('chatMessages');
+
+            // Dark mode toggle
+            let isDarkMode = localStorage.getItem('darkMode') === 'true';
+            
+            function updateDarkMode() {
+                document.documentElement.classList.toggle('dark', isDarkMode);
+                localStorage.setItem('darkMode', isDarkMode);
+            }
+            
+            updateDarkMode();
+            
+            darkModeToggle?.addEventListener('click', () => {
+                isDarkMode = !isDarkMode;
+                updateDarkMode();
+            });
+
+            // Sidebar toggle for mobile
+            sidebarToggle?.addEventListener('click', () => {
+                sidebar?.classList.remove('-translate-x-full');
+            });
+            
+            closeSidebar?.addEventListener('click', () => {
+                sidebar?.classList.add('-translate-x-full');
+            });
+
+            // Modal handling
+            function openModal(modal) {
+                modal?.classList.remove('hidden');
+            }
+            
+            function closeModal(modal) {
+                modal?.classList.add('hidden');
+            }
+
+            settingsBtn?.addEventListener('click', () => openModal(settingsModal));
+            
+            // Close modals when clicking outside
+            [settingsModal, modelManagerModal].forEach(modal => {
+                modal?.addEventListener('click', (e) => {
+                    if (e.target === modal) closeModal(modal);
+                });
+            });
+
+            // Message input handling
+            messageInput?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            sendButton?.addEventListener('click', sendMessage);
+
+            function sendMessage() {
+                const message = messageInput?.value.trim();
+                if (!message) return;
+                
+                // TODO: Implement message sending to Ollama API
+                // TODO: Add message to chat history
+                // TODO: Show typing indicator
+                // TODO: Stream response from API
+                
+                if (messageInput) messageInput.value = '';
+            }
+
+            // Auto-resize textarea
+            messageInput?.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 160) + 'px';
+            });
+
+            // TODO: Implement Ollama API integration
+            // TODO: Implement chat history persistence
+            // TODO: Implement model management
+            // TODO: Implement settings persistence
+            // TODO: Implement markdown rendering
+            // TODO: Implement copy/share functionality
+            // TODO: Implement file upload for context
+        })();
+    </script>
+</body>
+</html>
