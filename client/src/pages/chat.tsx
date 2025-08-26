@@ -42,9 +42,10 @@ export default function Chat() {
   };
 
   const startNewConversation = async (firstMessage?: string) => {
-    const title = firstMessage ?
-      firstMessage.slice(0, 50) + (firstMessage.length > 50 ? '...' : '') :
-      'New Chat';
+    let title = 'New Chat';
+    if (typeof firstMessage === 'string' && firstMessage.trim().length > 0) {
+      title = firstMessage.slice(0, 50) + (firstMessage.length > 50 ? '...' : '');
+    }
 
     try {
       const newConversation = await createConversationMutation.mutateAsync({
