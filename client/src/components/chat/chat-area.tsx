@@ -39,11 +39,60 @@ export default function ChatArea({
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const createMessageMutation = useCreateMessage();
-  const queryClient = useQueryClient(); // Get query client
+  const queryClient = useQueryClient();
+  const { data: messagesData, isLoading } = useMessages(conversationId);
+  const [localMessages, setLocalMessages] = useState<MessageType[]>(messages);
 
+  // Update local messages when messages prop or query data changes
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, streamingMessage]);
+    if (messagesData) {
+      setLocalMessages(messagesData);
+    } else if (messages) {
+      setLocalMessages(messages);
+    }
+  }, [messages, messagesData]);
+
+  // Refetch messages when conversation changes
+  useEffect(() => {
+    if (conversationId) {
+      queryClient.invalidateQueries({ queryKey: ['/api/conversations', conversationId, 'messages'] });
+    }
+  }, [conversationId, queryClient]);
+
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    if (messagesEndRef.current) {
+      try {
+        messagesEndRef.current.scrollIntoView({
+          behavior,
+          block: 'end',
+        });
+      } catch (error) {
+        console.error('Scroll error:', error);
+      }
+    }
+  };
+
+  // Handle scroll when messages change
+  useEffect(() => {
+    if (localMessages.length > 0) {
+      // Immediate scroll
+      scrollToBottom('auto');
+
+      // Delayed scrolls to handle content loading
+      const timeouts = [100, 300, 500].map(delay =>
+        setTimeout(() => scrollToBottom('smooth'), delay)
+      );
+
+      return () => timeouts.forEach(clearTimeout);
+    }
+  }, [localMessages]);
+
+  // Handle scroll during streaming
+  useEffect(() => {
+    if (streamingMessage) {
+      scrollToBottom('smooth');
+    }
+  }, [streamingMessage]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,10 +215,13 @@ export default function ChatArea({
     autoResize();
   }, [input]);
 
+  // Use local messages for display
+  const displayMessages = localMessages;
+
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col h-full">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between shrink-0">
         <div className="flex items-center space-x-3">
           {isMobile && (
             <Button
@@ -217,8 +269,20 @@ export default function ChatArea({
       </div>
 
       {/* Messages Area */}
-      <ScrollArea className="flex-1 overflow-y-auto p-4 space-y-4" data-testid="messages-container">
-        {messages.length === 0 && !streamingMessage ? (
+      <ScrollArea
+        className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0"
+        data-testid="messages-container"
+        type="always"
+        style={{ height: 'calc(100vh - 180px)' }}>
+        {isLoading ? (
+          <div className="flex justify-center items-center py-4">
+            <div className="flex space-x-2">
+              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            </div>
+          </div>
+        ) : displayMessages.length === 0 && !streamingMessage ? (
           <div className="flex justify-center items-center h-full">
             <div className="max-w-md text-center">
               <div className="w-16 h-16 mx-auto mb-4 gradient-primary rounded-full flex items-center justify-center">
@@ -236,7 +300,7 @@ export default function ChatArea({
           </div>
         ) : (
           <>
-            {messages.map((message) => (
+            {displayMessages.map((message) => (
               <Message key={message.id} message={message} />
             ))}
 
@@ -276,7 +340,7 @@ export default function ChatArea({
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 shrink-0">
         <div className="max-w-4xl mx-auto">
           <form onSubmit={handleSubmit} className="relative">
             <Textarea

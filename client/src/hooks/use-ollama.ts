@@ -27,6 +27,17 @@ export function useMessages(conversationId: string | undefined) {
   return useQuery({
     queryKey: ['/api/conversations', conversationId, 'messages'],
     enabled: !!conversationId,
+    staleTime: 30000, // Cache for 30 seconds
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    queryFn: async () => {
+      if (!conversationId) return [];
+      const res = await ollamaApi.getMessages(conversationId);
+      return res;
+    }
   });
 }
 
@@ -41,7 +52,7 @@ export function useCreateConversation() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (data: { title: string; model: string }) => 
+    mutationFn: (data: { title: string; model: string }) =>
       ollamaApi.createConversation(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
@@ -83,13 +94,13 @@ export function useCreateMessage() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ conversationId, data }: { 
-      conversationId: string; 
-      data: { role: 'user' | 'assistant'; content: string } 
+    mutationFn: ({ conversationId, data }: {
+      conversationId: string;
+      data: { role: 'user' | 'assistant'; content: string }
     }) => ollamaApi.createMessage(conversationId, data),
     onSuccess: (_, { conversationId }) => {
-      queryClient.invalidateQueries({ 
-        queryKey: ['/api/conversations', conversationId, 'messages'] 
+      queryClient.invalidateQueries({
+        queryKey: ['/api/conversations', conversationId, 'messages']
       });
     },
   });
@@ -145,7 +156,7 @@ export function useUpdateSetting() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ key, value }: { key: string; value: any }) => 
+    mutationFn: ({ key, value }: { key: string; value: any }) =>
       ollamaApi.updateSetting(key, value),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/settings'] });
