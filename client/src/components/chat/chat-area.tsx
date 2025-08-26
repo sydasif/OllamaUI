@@ -216,7 +216,7 @@ export default function ChatArea({
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4" data-testid="messages-container">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0" data-testid="messages-container">
         {messages.length === 0 && !streamingMessage ? (
           <div className="flex justify-center items-center h-full">
             <div className="max-w-md text-center">
